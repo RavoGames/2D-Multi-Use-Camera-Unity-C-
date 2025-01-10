@@ -1,0 +1,102 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class CameraController : MonoBehaviour
+{
+    [Header("Settings")]
+    public float smoothTime = 0.5f; // Smoothing factor for camera movement
+    public float minZoom = 5f; // Minimum zoom level
+    public float maxZoom = 15f; // Maximum zoom level
+    public float zoomLerpSpeed = 5f; // Lerp speed for zooming
+    [Header("Settings ++")]
+    public float StartDelayTime = 1; //TimeBeforeCameraStartsMoving'
+
+    [HideInInspector] 
+    public float DivsionFactor = 25;
+
+    private Vector3 velocity;
+    private Camera cam;
+
+    public List<Transform> players = new List<Transform>(); // List of player transforms to follow
+    public bool GoodToGo = false;
+
+    void Start()
+    {
+        StartCoroutine(Delay());
+        IEnumerator Delay()
+        {
+            yield return new WaitForSeconds(StartDelayTime);
+            cam = GetComponent<Camera>(); // Get reference to the camera component
+
+            GoodToGo = true;
+        }
+
+    }
+
+    void LateUpdate()
+    {
+        //RemoveGaps(players);
+        if (GoodToGo == true)
+        {
+            if (players.Count == 0) //Make Sure theirs Something to Track
+            {
+                Debug.LogError("CAMERA CANT TRACK - Line39");
+                return;
+            }
+
+            Move();
+            Zoom();
+
+        }
+    }
+    void REMOVE() //Quick Remove Function
+    {
+        players.Clear();
+    }
+    void Move()
+    {
+        Vector3 centerPoint = GetCenterPoint();
+
+        Vector3 newPosition = centerPoint;
+        newPosition.z = transform.position.z; // Keep the original Z position
+
+        transform.position = Vector3.SmoothDamp(transform.position, newPosition, ref velocity, smoothTime);
+    }
+
+    void Zoom()
+    {
+        float newZoom = Mathf.Lerp(minZoom, maxZoom, GetGreatestDistance() / DivsionFactor); // Adjust the division factor as needed
+
+        cam.orthographicSize = Mathf.Lerp(cam.orthographicSize, newZoom, Time.deltaTime * zoomLerpSpeed);
+    }
+
+    Vector3 GetCenterPoint()
+    {
+        if (players.Count == 1)
+        {
+            return players[0].position;
+        }
+
+        var bounds = new Bounds(players[0].position, Vector3.zero);
+
+        foreach (Transform player in players)
+        {
+            bounds.Encapsulate(player.position);
+        }
+
+        return bounds.center;
+    }
+
+    float GetGreatestDistance()
+    {
+        var bounds = new Bounds(players[0].position, Vector3.zero);
+
+        foreach (Transform player in players)
+        {
+            bounds.Encapsulate(player.position);
+        }
+
+        return Mathf.Max(bounds.size.x, bounds.size.y);
+    }
+}
